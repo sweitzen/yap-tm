@@ -1,0 +1,110 @@
+---
+title: "Data Science Capstone Milestone Report"
+author: "Scott D. Weitzenhoffer"
+date: "February 11, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This report presents initial exploratory data analysis supporting the predictive
+text model to be developed. The data for this project is the [Coursera Swiftkey 
+Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip.)
+It consists of internet-derived text in English, Finnish, German, and Russian.
+For this EDA, I will be using the English data, which consists of three files,
+each of approximately 200MB, collected from news sites, blogs, and twitter.
+```{r warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE}
+myfiles <- 
+    c("../final/en_US/en_US.blogs.txt", 
+      "../final/en_US/en_US.news.txt",
+      "../final/en_US/en_US.twitter.txt")
+
+for(fileName in myfiles) {
+    numLines <- 0
+    con <- file(fileName, "r")
+    while(linesRead <- length(readLines(con, 1)) > 0) {
+        numLines <- numLines + linesRead
+    }
+    close(con)
+    
+    size_mb <- file.info(fileName)$size / 2 ** 20
+    
+    print(paste0(fileName,
+                 "  num_lines=", numLines,
+                 "  size_MB=", size_mb))
+}
+```
+
+The R code supporting this report can be found on 
+[GitHub](https://github.com/sweitzen/data_science_project). It will not be
+reproduced here.
+
+---
+
+## Analysis
+I read the three files and concatenated them, shuffled them, and randomly
+sampled 80% for training, and 20% for testing. The cleaning I performed was
+fairly light: replacing abbreviations, ordinals, symbols, converting to 
+lowercase, and removing numbers, punctuation and whitespace. As I build and test
+the model, I may add or remove cleaning steps.  
+
+The analysis I performed for this consisted of generating 1-, 2-, 3-, and 
+4-grams, and generating barplots of the most frequent combinations.
+```{r warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE}
+library(ggplot2)
+
+makePlot <- function(data, title) {
+     ggplot(data[1:30, ], aes(reorder(word, -freq), freq)) +
+        geom_bar(stat="identity", fill=I("darkred")) +
+        theme(axis.text.x=element_text(angle=45, size=10, hjust=1)) +
+        labs(x="Ngrams", y="Count") +
+        ggtitle(title)
+}
+
+load("../data/unigrams.rda")
+load("../data/bigrams.rda")
+load("../data/trigrams.rda")
+load("../data/quadgrams.rda")
+
+makePlot(unigrams, "30 Most Common Unigrams")
+makePlot(bigrams, "30 Most Common Bigrams")
+makePlot(trigrams, "30 Most Common Trigrams")
+makePlot(quadgrams, "30 Most Common Quadgrams")
+```
+
+Given that these data were collected from the internet, I was quite surprised
+that the word "cat" does not appear in the top 30 unigrams. So, how far down the
+list does it occur?
+```{r}
+match("cat", unigrams$word)
+```
+
+Just for fun, let's plot a word cloud of common bigrams:
+```{r warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE}
+library(wordcloud)
+
+wordcloud(
+    bigrams$word, 
+    bigrams$freq, 
+    max.words=50, 
+    colors=c("grey80", "darkgoldenrod1", "tomato")
+)
+```
+
+---
+
+## Next Steps
+I believe a simple predictive text model can be constructed using these ngrams,
+matching the last one, two, or three words typed and making a short list of 
+predictions based on the most frequent ngram matching the last (n-1) words.
+
+The test dataset will be broken into 1-, 2-, and 3-grams, each with the next
+word, to compare against the predictions made by the model.
+
+When complete, this will be packaged into a Shiny app for evaluation.
+
+---
