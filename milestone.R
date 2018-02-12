@@ -168,3 +168,6 @@ wordcloud(
     max.words=50, 
     colors=c("grey80", "darkgoldenrod1", "tomato")
 )
+
+# Where is "cat"?
+match("cat", unigrams$word)
