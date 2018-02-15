@@ -9,12 +9,6 @@ library(wordcloud)
 # Set seed for reproducability
 set.seed(222)
 
-file_list <- c(
-    "../final/en_US/en_US.blogs.txt",
-    "../final/en_US/en_US.news.txt",
-    "../final/en_US/en_US.twitter.txt"
-)
-
 getData <- function(file_list) {
     dat <- NULL
     for(f in file_list) {
@@ -79,7 +73,7 @@ getNGram <- function(charVec, n) {
     
     word_freq <- NULL
     idx <- getIdx(length(charVec), n)
-    for(i in length(idx)-1) {
+    for(i in 1:(length(idx)-1)) {
         # Chunk data
         dat <- charVec[(idx[i]+1):idx[i+1]]
         
@@ -124,6 +118,12 @@ makePlot <- function(data, title) {
 if(file.exists("../data/dat.rda")) {
     load("../data/dat.rda")
 } else {
+    file_list <- c(
+        "../final/en_US/en_US.blogs.txt",
+        "../final/en_US/en_US.news.txt",
+        "../final/en_US/en_US.twitter.txt"
+    )
+    
     dat <- getData(file_list)
     save(dat, file="../data/dat.rda")
 }
