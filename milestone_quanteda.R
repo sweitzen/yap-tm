@@ -65,24 +65,6 @@ parallelizeTask <- function(task, ...) {
     return(r)
 }
 
-# Returns a vector of profanity words
-# TODO: Fix this function
-getProfanityWords <- function(corpus) {
-    profanityFileName <- "profanity.txt"
-    if (!file.exists(profanityFileName)) {
-        profanity.url <- "https://raw.githubusercontent.com/shutterstock/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/master/en"
-        download.file(profanity.url, destfile = profanityFileName, method = "curl")
-    }
-    
-    if (sum(ls() == "profanity") < 1) {
-        profanity <- read.csv(profanityFileName, header = FALSE, stringsAsFactors = FALSE)
-        profanity <- profanity$V1
-        profanity <- profanity[1:length(profanity)-1]
-    }
-    
-    return(profanity)
-}
-
 makeSentences <- function(input) {
     output <- tokens(
         input,
@@ -128,89 +110,139 @@ analyzeChunks <- function(dat, idx, N) {
         qcorpus <- corpus(dat[(idx[i]+1):idx[i+1]])
         sentences <- parallelizeTask(makeSentences, qcorpus)
         
-        dts <- vector("list", N)
         for (j in 1:N) {
+            tic <- Sys.time()
+            
             ngram <- parallelizeTask(makeTokens, sentences, j)
             ngram_dfm <- parallelizeTask(dfm, ngram)
             
-            dts[[j]] <- data.table(
+            dts <- data.table(
                 ngram=featnames(ngram_dfm),
                 count=colSums(ngram_dfm),
                 key="ngram"
             )[order(-count)]
             
-            # Remove unneeded object to reclaim memory
-            rm(list=c("ngram", "ngram_dfm"))
+            save(dts, file=paste0("../data/dts_", j, "_", i, ".rda"))
+            
+            rm(list=c("ngram", "ngram_dfm", "dts"))
+            
+            toc <- Sys.time()
+            print(paste0("Constructed ", j, "-gram; delta_t=", toc - tic))
         }
-        
-        save(dts, file=paste0("../data/dts_", i, ".rda"))
     }
 }
 
 combineChunks <- function(idx, N) {
-    out_dts <- vector("list", N)
-    for(i in 1:(length(idx)-1)) {
-        print(paste0("Combining chunk ", i, " of ", length(idx)-1))
+    for (j in 1:N) {
+        print(paste0("Combining ", j, "-grams"))
         
-        load(paste0("../data/dts_", i, ".rda"))
-        
-        for (j in 1:N) {
-            out_dts[[j]] <- 
+        out_dts <- NULL
+        for(i in 1:(length(idx)-1)) {
+            print(paste0("Combining chunk ", i, " of ", length(idx)-1))
+            
+            load(file=paste0("../data/dts_", j, "_", i, ".rda"))
+            out_dts <- 
                 rbindlist(
-                    list(out_dts[[j]], dts[[j]])
+                    list(out_dts, dts)
                 )[, lapply(.SD, sum, na.rm=TRUE), by=ngram]
         }
+        
+        dts <- out_dts
+        rm(list=c("out_dts"))
+        save(dts, file=paste0("../data/dts_total_", j, ".rda"))
+        
+        dts <- dts[count > 2]
+        save(dts, file=paste0("../data/dts_pruned_", j, ".rda"))
+        
+        # Remove unneeded object to reclaim memory
+        rm(list=c("dts"))
     }
-    
-    for (j in 1:N) {
-        setkey(out_dts[[j]], ngram)
-    }
-    
-    return(out_dts)
-}
-
-# Good Turing
-createFreqs <- function(index) {
-    DT <- dts[[index]]
-    l <- rep(1, times = DT[, max(count)])
-    for (n in unique(DT$count)) {
-        l[n] <- DT[count == n, length(count)]
-    }
-    l[length(l) + 1] <- 1
-    
-    return(l)
 }
 
 getNgram <- function(text, i, sep = "_") {
-    regex <- paste0(
-        "^(([^", sep, "]*", sep, "){", 
-        i, 
-        "}[^", sep, "]*).*"
-    )
-    
-    return(paste0("^", sub(regex, "\\1", text)))
-}
-
-# Stupid Backoff
-stupidBO <- function(text, n) {
-    if (n == 0) {
-        return(0)
-    } 
-    l <- rep(1, times=n)
-    exp <- n
-    for (i in n:1) {
-        regex <- getNgram(text, i, sep = "_")
-        l[i] <- .4^exp * dts[[i]][.(regex)]$count
-        #l[i] <- .4^exp * sum(dts[[i]][ngram %like% paste0("^", regex, "_")]$count)
-        exp <- exp + 1
+    toks <- unlist(strsplit(text, "_"))
+    n <- length(toks)
+    m <- n - i + 1
+    out <- toks[m]
+    if (m < n) {
+        for (j in (m+1):n) out <- paste0(out, "_", toks[j])
     }
-    return(sum(l))
+    return(out)
 }
 
+predictNext <- function(input) {
+    # Parse input text into an (N-1)-gram
+    input <- makeSentences(input)
+    
+    num_words <- sapply(gregexpr("[[:alpha:]]+", input),
+                        function(x) sum(x > 0))
+    
+    input <- makeTokens(input, num_words)$text1
+    
+    # Max size Ngram to use to predict
+    Nmax <- min(num_words, N-1) + 1
+    
+    input <- getNgram(input, Nmax-1, "_")
+    
+    
+    lambda <- 0.4
+    hits <- NULL 
+    
+    # Stupid backoff explained in
+    # https://rpubs.com/pferriere/dscapreport
+    
+    for (i in Nmax:2) {
+        exp <- Nmax - i
+        txt <- getNgram(input, i-1, "_")
+        
+        # Input (N-1)gram count
+        baseCount <- dts[[i-1]][.(txt)]$count
+        
+        # If input (N-1)gram count wasn't found, skip to next iteration
+        if (is.na(baseCount)) next
+        
+        hitsi <- dts[[i]][ngram %like% paste0("^", txt, "_")]
+        
+        if (nrow(hitsi) == 0) next
+        
+        hitsi <- hitsi[, ':=' (
+            baseCount=baseCount,
+            exp=exp,
+            score=(lambda^exp * count / baseCount), # Implement Stupid Backoff
+            N=i,
+            X=txt,
+            y=tail(strsplit(ngram, split="_")[[1]],1)
+        ), by=ngram][order(-count)]
+        
+        # Remove hits already found
+        hitsi <- hitsi[!(y %in% hits$y)]
+        
+        hits <- rbind(hits, hitsi[1:5][!is.na(y)])
+        
+        #    num_found <- num_found + nrow(hits[[i]])
+        if (nrow(hits) >= 5) break
+    }
+    
+    if (is.null(hits)) {
+        hits <- 
+            data.table(score=0, y=dts[[1]][order(-count)][1:5, ngram])
+    } else {
+        hits <- hits[1:5, .(score, y)][!is.na(y)][order(-score)]
+        
+        if (nrow(hits) < 5) {
+            m <- 5 - nrow(hits)
+            default_hits <- 
+                data.table(score=0, y=dts[[1]][order(-count)][1:m, ngram])
+            hits <- rbind(hits, default_hits)
+        }
+    }
+    
+    return(hits)
+}
 
 # Main code ====================================================================
 
-N <- 4
+N <- 5
 
 if(file.exists("../data/dts_total.rda")) {
     load("../data/dts_total.rda")
@@ -232,47 +264,49 @@ if(file.exists("../data/dts_total.rda")) {
     
     analyzeChunks(dat$train, idx, N)
     
-    dts <- combineChunks(idx, N)
-    
-    save(dts, file="../data/dts_total.rda")
+    combineChunks(idx, N)
 }
 
-nfeats <- vector("list", N)
 for (i in 1:N) {
-    nfeats[[i]] <- nrow(dts[[i]])
+    load(paste0("../data/dts_total_", i, ".rda"))
+    
+    dts <- dts[count > 2]
+    save(dts, file=paste0("../data/dts_pruned_", i, ".rda"))
+    
+    # Remove unneeded object to reclaim memory
+    rm(list=c("dts"))
 }
+
+dts_list <- vector("list", N)
+for (i in 1:N) {
+    load(paste0("../data/dts_pruned_", i, ".rda"))
+    
+    dts_list[[i]] <- dts
+    rm(list=c("dts"))
+}
+
+dts <- dts_list
+rm(list=c("dts_list"))
+
+
 # ==============================================================================
 
 # Plot common N-grams
+for (j in 1:N) {
+    dts[[j]] <- dts[[j]][order(-count)]
+}
 makePlot(dts[[1]], "30 Most Common Unigrams")
 makePlot(dts[[2]], "30 Most Common Bigrams")
 makePlot(dts[[3]], "30 Most Common Trigrams")
 makePlot(dts[[4]], "30 Most Common Quadgrams")
+makePlot(dts[[5]], "30 Most Common Pentagrams")
 
-countDFS <- list(
-    parallelizeTask(createFreqs, 1),
-    parallelizeTask(createFreqs, 2),
-    parallelizeTask(createFreqs, 3),
-    parallelizeTask(createFreqs, 4)
-)
 
-regex <- "how_is_it"
-n0 <- 4
-DT <- dts[[n0]]
-# add ^ to make sure we are at the beginning of an ngram
-#hits <- DT[ngram %like% paste0("^", regex, "_"), ngram]
-hits <- DT[ngram %like% paste0("^", regex, "_"), ngram]
-
-if (length(hits) > 0) {
-    print("Hit!")
-    baseCount <- dts[[n0]][.(regex)]$count
-    for (hit in hits) {
-        DT[.(hit), ':=' (
-            mle = count / baseCount, 
-            lap = (count + 1) / (baseCount + nfeats[[n0]]),
-            gt = (count + 1) * (countDFS[[n0]][count + 1] / countDFS[[n0]][count]),
-            sbo = count + 0.4 * baseCount + stupidBO(ngram, n0 - 1)
-        )]
-    }
-    DT[hits][order(-gt)]
+for (j in 1:N) {
+    setkey(dts[[j]], ngram)
 }
+
+# Input text
+predictNext("he said, 'Hello")
+
+predictNext("bxxt gfff nazgrapo")
