@@ -25,8 +25,8 @@ set.seed(222)
 delta_t <- function(tic, toc) {
     delta_t <- toc - tic
     t_h <- as.integer(as.numeric(delta_t, units="hours"))
-    t_m <- as.integer(as.numeric(delta_t, units="mins")) - 60L * t_h
-    t_s <- round(as.numeric(delta_t, units="secs"), 2) - 60L * t_m
+    t_m <- as.integer(as.numeric(delta_t, units="mins")) - 60L*t_h
+    t_s <- round(as.numeric(delta_t, units="secs") - 60L*t_m  - 3600L*t_h, 2)
     
     return(paste0("delta_t= ", t_h, "h:", t_m, "m:", t_s, "s"))
     
