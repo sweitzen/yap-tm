@@ -15,11 +15,14 @@ library(quanteda)
 # Set seed for reproducability
 set.seed(222)
 
-# This function takes Sys.time() objects tic and toc (toc >= tic) and returns a
-# string of format"delta_t= 00h:00m:00.00s"
+################################################################################
+# This function takes Sys.time() objects tic and toc (toc >= tic) and returns
+# a string of format"delta_t= 00h:00m:00.00s"
 # Input:
-#        tic - a date-time or date object
-#        toc - a date-time or date object (toc >= tic)
+#    tic
+#        a date-time or date object
+#    toc
+#        a date-time or date object (toc >= tic)
 # Output:
 #        a string of format "delta_t= 00h:00m:00.00s"
 delta_t <- function(tic, toc) {
@@ -32,8 +35,16 @@ delta_t <- function(tic, toc) {
     
 }
 
+################################################################################
 # Generic function for parallelizing any task (when possible)
-# 
+# Input:
+#    task
+#        function to parallelize
+#    ...
+#        arguments for task
+# Output:
+#        output of task with arguments ...
+#
 # Credit for this function goes to Eric Rodriguez
 # http://rstudio-pubs-static.s3.amazonaws.com/169109_dcd8434e77bb43da8cf057971a010a56.html
 parallelizeTask <- function(task, ...) {
@@ -51,16 +62,19 @@ parallelizeTask <- function(task, ...) {
     return(r)
 }
 
+################################################################################
 # Given a vector of paths to input data text files, this function reads them all
 # and concatenates them. It then shuffles the data, and splits it into train and
-# test sets (98% of data to train).
+# test sets.
 # Input:
-#        file_list - a vector of paths to input files relative to the directory
-#                    of prepareData.R
+#    file_list
+#        a vector of paths to input files relative to the directory of
+#        prepareData.R
 # Output:
 #        a list containing training data (element 1) and test data (element 2)
 getData <- function(file_list) {
     
+    # Read data from files
     dat <- NULL
     for(f in file_list) {
         txt <- readLines(con=f, encoding="UTF-8", skipNul=TRUE)
@@ -73,6 +87,8 @@ getData <- function(file_list) {
     dat <- dat[sample(seq(length(dat)))]
     
     # Split data into train and train sets
+    # We retain 98% of the data for train because there are millions of rows,
+    # and 2% is more than adequate to validate
     smp_size <- floor(0.98 * length(dat))
     
     inTrain <- sample(seq_len(length(dat)), size=smp_size)
@@ -83,15 +99,19 @@ getData <- function(file_list) {
     return(list(train=train, test=test))
 }
 
+################################################################################
 # Given a number of lines in an input text file, this function creates an
 # index to split the file into chunks, to aid in processing large files. The
 # chunk size is hard-coded here.
 # Input:
-#        max_idx - the number of lines in the fule (i.e., the max index number)
+#    max_idx
+#        the number of lines in the fule (i.e., the max index number)
 # Output:
 #        a sequence (integer vector) from 0 to max_idx, by chunk_size
 getIdx <- function(max_idx) {
-
+    
+    # Chunk sizes of 10^5 rows are small enough not to overwhelm the memory
+    # and processing constraints of most modern computers.
     chunk_size <- min(100000L, max_idx)
     idx <- seq(0L, max_idx, by=chunk_size)
     idx[length(idx)] <- as.integer(max_idx)
@@ -99,11 +119,13 @@ getIdx <- function(max_idx) {
     return(idx)
 }
 
+################################################################################
 # Given a corpus, this function tokenizes each document in it into individual
 # sentences, to prevent the makeTokens function from creating Ngrams that span
 # sentences.
 # Input:
-#        input - a corpus
+#    input
+#        a corpus
 # Output:
 #        a named character vector with one sentence per element. The output will
 #        have length >= length of the input corpus
@@ -111,10 +133,11 @@ getIdx <- function(max_idx) {
 # Inspiration for this function from Eric Rodriguez
 # http://rstudio-pubs-static.s3.amazonaws.com/169109_dcd8434e77bb43da8cf057971a010a56.html
 makeSentences <- function(input) {
-
+    
+    # TODO: Figure out why the remove_* arguments seem to do nothing
     output <- tokens(
         input,
-        what = "sentence",
+        what="sentence",
         remove_numbers=TRUE,
         remove_punct=TRUE,
         remove_separators=TRUE,
@@ -133,19 +156,23 @@ makeSentences <- function(input) {
     return(output)
 }
 
-# Given an input character vector and integer n, splits the input into Ngrams
+################################################################################
+# Given an input character vector and ngram size, splits the input into Ngrams.
 # Input:
-#        input - a character vector of individual sentences
-#        n - size of Ngrams to generate, default=1
-#        concatenator - character to use in concatenating n-grams, 
-#                       default="_"
+#    input
+#        a character vector of individual sentences
+#    ngram_size
+#        size of Ngrams to generate, default=1
+#    concatenator
+#        character to use in concatenating n-grams, default="_"
 # Output:
 #        a tokens vector consisting of Ngrams for each sentence
 #
 # Inspiration for this function from Eric Rodriguez
 # http://rstudio-pubs-static.s3.amazonaws.com/169109_dcd8434e77bb43da8cf057971a010a56.html
-makeTokens <- function(input, n=1L, concatenator="_") {
+makeTokens <- function(input, ngram_size=1L, concatenator="_") {
     
+    # TODO: Figure out why the remove_* arguments seem to do nothing
     output <- tokens(
         input,
         what="word",
@@ -154,22 +181,27 @@ makeTokens <- function(input, n=1L, concatenator="_") {
         remove_separators=TRUE,
         remove_twitter=FALSE,
         remove_hyphens=FALSE,
-        ngrams=as.integer(n),
+        ngrams=as.integer(ngram_size),
         concatenator=concatenator
     )
     
     return(output)
 }
 
+################################################################################
 # This function breaks input raw text data dat into chunks as specified in idx,
 # generates 1-grams, 2-grams, ..., Nmax-grams from each chunk, and then saves
 # the chunks to disk.
 # Input:
-#        dat - character vector of raw input data. Each element may contain
-#              multiple sentences.
-#        idx - an integer vector from 0 to length(dat)
-#        Nmax - maximum size of Ngrams to create
-#        train - boolean value - TRUE for train data, FALSE for test
+#    dat
+#        character vector of raw input data. Each element may contain multiple
+#        sentences.
+#    idx
+#        an integer vector from 0 to length(dat)
+#    Nmax
+#        maximum size of Ngrams to create
+#    train
+#        TRUE for train data, FALSE for test
 # Output:
 #        none (data saved to disk and status messages printed to console)
 analyzeChunks <- function(dat, idx, Nmax, train) {
@@ -226,19 +258,24 @@ analyzeChunks <- function(dat, idx, Nmax, train) {
             toc <- Sys.time()
 
             print(paste0("Constructed ", j, "-gram; Saved at: ", file_name,
-                         "; delta_t= ", delta_t(tic, toc))
+                         "; ", delta_t(tic, toc))
             )
         }
     }
 }
 
+################################################################################
 # This function combines the previously-generated Ngram chunks into total
 # Ngrams, and then saves the chunks to disk. It then prunes very low-frequency
-# terms from the Ngrams, and saves the pruned Ngrams to disk.
+# terms from the Ngrams, splits the pruned Ngrams into X and y, and saves the 
+# pruned Ngrams to disk.
 # Input:
-#        idx - an integer vector from 0 to length(dat)
-#        Nmax - maximum size of Ngrams to create
-#        train - boolean value - TRUE for train data, FALSE for test
+#    idx
+#        an integer vector from 0 to length(dat)
+#    Nmax
+#        maximum size of Ngrams to create
+#    train
+#        TRUE for train data, FALSE for test
 # Output:
 #        none (data saved to disk and status messages printed to console)
 combineChunks <- function(idx, Nmax, train) {
@@ -263,7 +300,8 @@ combineChunks <- function(idx, Nmax, train) {
             print(paste0("Combining chunk ", i, " of ", length(idx)-1))
             
             # Load 'dts_j_i.rda' (j-grams, chunk i) from disk
-            load(file=paste0("../data/", fname, "/chunks/dts_", j, "_", i, ".rda"))
+            load(file=paste0("../data/", fname, "/chunks/dts_", j, "_", i, 
+                             ".rda"))
             
             # Combine dts for (j, i) with output, and sum any identical ngrams
             out_dts <- 
@@ -275,6 +313,8 @@ combineChunks <- function(idx, Nmax, train) {
         # Rename output
         dts <- out_dts
         rm(list=c("out_dts"))
+        
+        setkey(dts, ngram)
         
         # Save 'dts_total_j.rda' to disk
         file_name <-
@@ -289,8 +329,40 @@ combineChunks <- function(idx, Nmax, train) {
         # number of entries with large counts. Most of the rows consist of very
         # small counts, so we can achieve significant memory savings by
         # truncating our Ngram tables to include only those entries with a count
-        # larger than 2.
-        dts <- dts[count > 2]
+        # larger than 4. Don't prune the test data, though, because that will
+        # skew accuracy by filtering out low-frequency terms.
+        if (train == TRUE) {
+            dts <- dts[count > 4]
+        }
+        
+        # Split Ngrams up into input (X) and prediction (y)
+        print("Splitting Ngrams into X and y")
+        
+        if (train == TRUE) {
+            spl <- "_"
+        } else {
+            spl <- " "
+        }
+        
+        if (j == 1) {
+            dts <- dts[, ':=' (
+                X="",
+                y=ngram
+            ), by=ngram]
+        } else {
+            dts <- dts[, ':=' (
+                X=paste(
+                    head(strsplit(ngram, split=spl)[[1]], j-1),
+                    collapse=spl
+                ),
+                y=tail(strsplit(ngram, split=spl)[[1]], 1)
+            ), by=ngram]
+        }
+        
+        # Original ngram column not needed and takes up a lot of memory
+        dts$ngram <- NULL
+        
+        setkey(dts, X, y)
         
         # Save 'dts_pruned_j.rda' to disk
         file_name <-
@@ -305,9 +377,11 @@ combineChunks <- function(idx, Nmax, train) {
     }
 }
 
-# This is the main function that calls the other functions to prepare the data.
+################################################################################
+# This is the main function to call the other functions to prepare the data.
 # Input:
-#        train - boolean value - TRUE for train data, FALSE for test
+#    train
+#        TRUE for train data, FALSE for test
 # Output:
 #        none (data saved to disk and status messages printed to console)
 prepareData <- function(train=TRUE) {
@@ -354,12 +428,16 @@ prepareData <- function(train=TRUE) {
     
     # Package our Ngrams into a single list to make loading simpler
     print("Packaging Ngrams into single list")
+    
+    # Initialize output
     dts_list <- vector("list", Nmax)
+    
+    # Loop over Ngram size: i
     for (i in 1:Nmax) {
         load(paste0("../data/", fname, "/pruned/dts_pruned_", i, ".rda"))
         
-        # Set the key to ngram
-        setkey(dts, ngram)
+        # Set the key to (X, y)
+        setkey(dts, X, y)
         
         dts_list[[i]] <- dts
         rm(list=c("dts"))
@@ -376,5 +454,5 @@ prepareData <- function(train=TRUE) {
     
     toc <- Sys.time()
 
-    print(paste0("Done! delta_t= ", delta_t(tic, toc)))
+    print(paste0("Done! ", delta_t(tic, toc)))
 }
