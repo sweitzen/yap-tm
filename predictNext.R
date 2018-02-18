@@ -1,4 +1,5 @@
-# exploreData.R
+################################################################################
+# predictNext.R
 #
 # Resources used in creating this code:
 # https://rpubs.com/pferriere/dscapreport (for SBO understanding)
