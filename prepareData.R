@@ -1,11 +1,19 @@
+################################################################################
 # prepareData.R
+# 
+# The data used in this project can be found at:
+# https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
+#
+# On my Dell Precision T3500 with 24 GB of RAM, the runtimes were:
+#     02h:35m:42s to process the train data
+#     00h:11m:23s to process the test data
 #
 # Resources used in creating this code:
-# http://rstudio-pubs-static.s3.amazonaws.com/169109_dcd8434e77bb43da8cf057971a010a56.html
-# https://github.com/lgreski/datasciencectacontent/blob/master/markdown/capstone-ngramComputerCapacity.md
-# https://www.coursera.org/learn/data-science-project/discussions/forums/bXKqKZfYEeaRew5BAmrkbw/threads/dW1Z5sKMEeeTyArhA0ZGig
 # https://github.com/rstudio/cheatsheets/raw/master/quanteda.pdf
 # https://s3.amazonaws.com/assets.datacamp.com/blog_assets/datatable_Cheat_Sheet_R.pdf
+# https://github.com/lgreski/datasciencectacontent/blob/master/markdown/capstone-ngramComputerCapacity.md
+# http://rstudio-pubs-static.s3.amazonaws.com/169109_dcd8434e77bb43da8cf057971a010a56.html
+# https://www.coursera.org/learn/data-science-project/discussions/forums/bXKqKZfYEeaRew5BAmrkbw/threads/dW1Z5sKMEeeTyArhA0ZGig
 
 library(data.table)
 library(doParallel)
@@ -63,25 +71,60 @@ parallelizeTask <- function(task, ...) {
 }
 
 ################################################################################
-# Given a vector of paths to input data text files, this function reads them all
-# and concatenates them. It then shuffles the data, and splits it into train and
-# test sets.
+# Given a zip archive and pattern matching files to be extracted, this function
+# reads all matching files and concatenates them. It then shuffles the data, 
+# and splits it into train and test sets.
 # Input:
-#    file_list
-#        a vector of paths to input files relative to the directory of
+#    zip_file
+#        name of zip archive with path relative to the directory of 
 #        prepareData.R
+#    pattern
+#        a regex pattern of files to extract from the zip file
 # Output:
-#        a list containing training data (element 1) and test data (element 2)
-getData <- function(file_list) {
+#        a list containing train data (element 1) and test data (element 2)
+getData <- function(zip_file, pattern) {
     
-    # Read data from files
+    # Create temp directory and extract files from zip archive
+    td <- tempdir()
+    
+    # Get list of files to extract from the archive based on provided pattern
+    all_files <- unzip(zip_file, list=TRUE, exdir=td)
+    mask <- grepl(pattern, all_files$Name)
+    files_to_extract <- all_files[mask, ]
+    
+    # Reformat Length column to be more meaningful
+    files_to_extract$Length <- round(files_to_extract$Length / 2^20, 4)
+    names(files_to_extract)[names(files_to_extract) == "Length"] <- "Size_Mb"
+    
+    # Inform user of files to be extracted
+    print(paste0(
+        "Extracting these files from archive '", zip_file, 
+        "' with pattern matching '", pattern, "':"
+    ))
+    print(files_to_extract)
+    
+    # Extract the files
+    extracted_files <- unzip(zip_file, files_to_extract$Name, exdir=td)
+    
+    # Initialize output
     dat <- NULL
-    for(f in file_list) {
-        txt <- readLines(con=f, encoding="UTF-8", skipNul=TRUE)
+    
+    # Loop over extracted files
+    for(next_file in extracted_files) {
+        # Read the next extracted file
+        txt <- readLines(con=next_file, encoding="UTF-8", skipNul=TRUE)
         
         # Concatenate data
         dat <- c(dat, txt)
     }
+    
+    # Delete extracted files
+    unlink(extracted_files)
+    
+    print(paste0(
+        "Extracted data has ", length(dat), " lines and occupies ", 
+        round(object.size(dat) / 2^20, 4), " Mb of memory"
+    ))
     
     # Shuffle data
     dat <- dat[sample(seq(length(dat)))]
@@ -89,7 +132,14 @@ getData <- function(file_list) {
     # Split data into train and train sets
     # We retain 98% of the data for train because there are millions of rows,
     # and 2% is more than adequate to validate
-    smp_size <- floor(0.98 * length(dat))
+    train_frac <- 0.98
+    
+    print(paste0(
+        "Splitting data in train/test sets; fraction retained in train = ", 
+        train_frac
+    ))
+    
+    smp_size <- floor(train_frac * length(dat))
     
     inTrain <- sample(seq_len(length(dat)), size=smp_size)
     
@@ -397,14 +447,10 @@ prepareData <- function(train=TRUE) {
         print("Loading dat.rda")
         load("../data/dat.rda")
     } else {
-        print("Loading data from initial text files")
-        file_list <- c(
-            "../final/en_US/en_US.blogs.txt",
-            "../final/en_US/en_US.news.txt",
-            "../final/en_US/en_US.twitter.txt"
-        )
+        zip_file <- "../Coursera-SwiftKey.zip"
+        pattern <- "en_US.*.txt"
         
-        dat <- getData(file_list)
+        dat <- getData(zip_file, pattern)
         save(dat, file="../data/dat.rda")
     }
     
