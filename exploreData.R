@@ -24,26 +24,44 @@ library(wordcloud)
 #        none (a ggplot2 chart printed to the screen)
 makePlot <- function(data, title) {
     
-    # Select top 30 data points and re-construct Ngrams from X and y
-    data <- data[1:30][, ngram := (trimws(paste0(X, " ", y)))]
+    # total_count will be used to rescale count as frequency
+    total_count <- sum(data$count)
+    # max_freq will be used to generate theoretical Zipf frequency
+    max_freq <- data[1, count] / total_count
     
-    # Add a column for theoretical Zipf frequency
-    maxCount <- data[1, count]
-    for (i in 1:30) data[i, zipf:=(maxCount / i)]
+    # Select top 30 data points
+    data <- data[1:30]
     
-    ggplot(data=data, aes(reorder(ngram, -count), count, group=1)) +
-        geom_bar(stat="identity", fill=I("darkred")) +
-        geom_line(data=data, aes(reorder(ngram, -count), zipf), size=2, 
-                  color="darkblue") +
-        theme(axis.text.x=element_text(angle=45, size=10, hjust=1)) +
-        labs(x="Ngrams", y="Count") +
-        ggtitle(title)
+    # Add columns for ngram, frequency and theoretical Zipf frequency
+    for (i in 1:30) data[i, ':=' (
+        ngram = gsub("_", " ", trimws(paste0(X, " ", y))),
+        frequency = (count / total_count),
+        zipf = max_freq / i
+    )]
+    
+    ggplot(data=data) +
+        geom_bar(
+            mapping=aes(reorder(ngram, frequency), frequency, group=1),
+            stat="identity",
+            fill=I("darkred")
+        ) +
+        geom_line(
+            mapping=aes(reorder(ngram, frequency), zipf, group=2),
+            size=2,
+            color="darkblue"
+        ) +
+        labs(
+            x="Ngrams",
+            y="Frequency"
+        ) +
+        ggtitle(title) +
+        coord_flip()
 }
 
 # ==============================================================================
 
 # Load Ngrams
-load("../data/train/dts.rda")
+load("../data/train/dts_pruned_8.rda")
 
 # Maximum size of Ngrams
 Nmax <- 5
