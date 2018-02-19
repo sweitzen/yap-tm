@@ -4,10 +4,7 @@
 library(data.table)
 
 
-# testPredict uses delta_t()
-source("prepareData.R")
-
-# testpredict uses predictNext()
+source("delta_t.R")
 source("predictNext.R")
 
 ################################################################################
@@ -131,10 +128,6 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
                 # Update table
                 test[i]$pred <- mypred$y
                 test[i]$score <- mypred$score
-                #test[i, ':=' (
-                #    pred=mypred$y,
-                #    score=mypred$score
-                #)]
             }
         }
         
@@ -147,11 +140,7 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
             # correct_wt is the weighted correct predictions
             test[, correct := as.integer(y == pred)]
             test[, correct_wt := (correct * count)] 
-            #test[, ':=' (
-            #    correct=as.integer(y == pred),
-            #    correct_wt=(correct * count)
-            #), by=c("X", "y")]
-            
+
             file_name <- paste0("../data/validation/test_", j, ".rda")
             
             print(paste0("Saving ", file_name))
