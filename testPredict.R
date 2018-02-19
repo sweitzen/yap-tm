@@ -123,7 +123,7 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
                 }
                 
                 # Calculate prediction
-                mypred <- predictNext(test[i]$X)[1]
+                mypred <- predictNext(test[i]$X, dts)[1]
                 
                 # Update table
                 test[i]$pred <- mypred$y

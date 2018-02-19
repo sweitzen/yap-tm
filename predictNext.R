@@ -20,7 +20,7 @@ source("tokenizer.R")
 # Inputs:
 #    input
 #        a string from which predictNext will predict
-#    dts (not passed, but present in calling environment)
+#    ngrams
 #        a list of data.tables of size Nmax containing 1-grams, 2-grams, ...,
 #        Nmax-grams and their total counts observed in the input corpus. The 
 #        columns are count, X (first n-1 terms of n-gram), and y (last word of 
@@ -28,7 +28,7 @@ source("tokenizer.R")
 # Output:
 #        a data.table of the top 5 predictions of the next word, plus their SBO
 #        scores
-predictNext <- function(input) {
+predictNext <- function(input, ngrams) {
     
     if (trimws(input) == "") {
         return(data.table(score=0, y=""))
@@ -84,14 +84,14 @@ predictNext <- function(input) {
         y_search <- tail(strsplit(input, split="_")[[1]], 1)
         
         # Input (N-1)-gram count
-        # NOTE: dts should have key (X, y)
-        baseCount <- dts[[i-1]][.(X=X_search, y=y_search)]$count
+        # NOTE: ngrams should have key (X, y)
+        baseCount <- ngrams[[i-1]][.(X=X_search, y=y_search)]$count
         
         # If input (N-1)-gram count wasn't found, skip to next iteration
         if (is.na(baseCount)) next
         
-        # Subset dts[[i]] where X matches txt
-        hitsi <- dts[[i]][.(X=txt)]
+        # Subset ngrams[[i]] where X matches txt
+        hitsi <- ngrams[[i]][.(X=txt)]
         
         # If no hits were found, skip to next iteration
         if (nrow(hitsi) == 0) next
@@ -130,14 +130,14 @@ predictNext <- function(input) {
     # TODO: Determine how to provide a score (if possible) for these terms
     if (is.null(hits)) {
         hits <- 
-            data.table(score=0, y=dts[[1]][order(-count)][1:5, y])
+            data.table(score=0, y=ngrams[[1]][order(-count)][1:5, y])
     } else {
         hits <- hits[1:5, .(score, y)][!is.na(y)][order(-score)]
         
         if (nrow(hits) < 5) {
             m <- 5 - nrow(hits)
             default_hits <- 
-                data.table(score=0, y=dts[[1]][order(-count)][1:m, y])
+                data.table(score=0, y=ngrams[[1]][order(-count)][1:m, y])
             hits <- rbind(hits, default_hits)
         }
     }
