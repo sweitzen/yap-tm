@@ -3,6 +3,11 @@
 #
 # Resources used in creating this code:
 # https://rpubs.com/pferriere/dscapreport (for SBO understanding)
+# TODO: modify predictNext to detect trailing space. If found, then we have a
+# input ngram from which to predict. If no space, assume next word is still
+# being typed. Truncate after last space, and save word fragment. Filter hits
+# in each loop for entries starting with word fragment. Fewer than 5 predictions
+# may be returned.
 
 library(data.table)
 library(doParallel)

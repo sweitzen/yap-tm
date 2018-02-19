@@ -1,5 +1,8 @@
 ################################################################################
 # testPredict.R
+# TODO: testPredict should test whether correct word is within top 5 predictions
+# not just top prediction. Output TRUE/FALSE for each of top five predictions,
+# allowing for cumulative probability from top prediction to top 3, to top 5.
 
 library(data.table)
 
