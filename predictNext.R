@@ -29,7 +29,11 @@ source("tokenizer.R")
 #        a data.table of the top 5 predictions of the next word, plus their SBO
 #        scores
 predictNext <- function(input) {
-
+    
+    if (trimws(input) == "") {
+        return(data.table(score=0, y=""))
+    }
+    
     # Maximum size of Ngrams
     Nmax <- 5
     
