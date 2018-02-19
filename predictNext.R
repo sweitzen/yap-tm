@@ -8,10 +8,8 @@ library(data.table)
 library(doParallel)
 library(quanteda)
 
-# predictNext uses:
-#   * makeSentences
-#   * makeTokens
-source("prepareData.R")
+
+source("tokenizer.R")
 
 ################################################################################
 # Given an input, this function predicts the top 5 most likely next words from
