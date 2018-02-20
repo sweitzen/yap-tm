@@ -1,8 +1,5 @@
 ################################################################################
 # testPredict.R
-# TODO: testPredict should test whether correct word is within top 5 predictions
-# not just top prediction. Output TRUE/FALSE for each of top five predictions,
-# allowing for cumulative probability from top prediction to top 3, to top 5.
 
 library(data.table)
 
@@ -12,13 +9,15 @@ source("predictNext.R")
 
 ################################################################################
 # If dts_prepped.rda exists, reads it from disk. Otherwise, reads test/dts.rda
-# loops over Ngrams, adds a column for the prediction (pred), the score (score),
-# correct, and correct_wt, and then saves this as test/dts_prepped.rda.
+# loops over Ngrams, adds columns for the predictions (pred1..5), boolean 
+# columns (correct1..5), such that columnN indicated cumulatively whether the 
+# actual next word y is in pred1..N,  and then saves this as 
+# test/dts_prepped.rda.
 # Input:
 #    none
 # Output:
 #        a list of Ngram data.tables, with columns ngram (key), count, X, y,
-#        pred, and score
+#        pred1..5, and correct1..5
 getPreppedTestData <- function() {
     
     tic <- Sys.time()
@@ -40,14 +39,20 @@ getPreppedTestData <- function() {
         # Loop over Ngram size: i
         for (i in 2:Nmax) {
             print(paste0(
-                "Adding pred, score, correct, correct_wt to ", i, "-grams")
+                "Adding pred1..5, correct1..5 to ", i, "-grams")
             )
             
             dts[[i]] <- dts[[i]][, ':=' (
-                pred="",
-                score=0.0,
-                correct=0L,
-                correct_wt=0L
+                pred1="",
+                pred2="",
+                pred3="",
+                pred4="",
+                pred5="",
+                correct1=FALSE,
+                correct2=FALSE,
+                correct3=FALSE,
+                correct4=FALSE,
+                correct5=FALSE
             )]
         }
         
@@ -65,8 +70,8 @@ getPreppedTestData <- function() {
 ################################################################################
 # Given input train set dts and test set dts_test, this function take a random
 # sample smp_size from dts_test, feeds each test X into predictNext and stores
-# the tope prediction and score in the test data.table. It also scores (1 or 0)
-# whether the prediction is correct. The function also saves a benchmark file
+# the top 5 predictions in the test data.table. It also scores (TRUE or FALSE)
+# whether the predictions is correct. The function also saves a benchmark file
 # with a data.table of Ngram size (ngram), smp_size (nrows), accuracy, total 
 # time in seconds  to calculate smp_size predictions for Ngram size ngram, and
 # time in milliseconds for each prediction.
@@ -90,6 +95,9 @@ getPreppedTestData <- function() {
 # Outputs:
 #        benchmark data.table (other outputs are saved to disk)
 testPredict <- function(smp_size, bare_benchmark=FALSE) {
+    
+    tic0 <- Sys.time()
+    
     # Maximum size of Ngrams
     Nmax <- 5
     
@@ -126,35 +134,53 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
                 }
                 
                 # Calculate prediction
-                mypred <- predictNext(test[i]$X, dts)[1]
+                mypred <- predictNext(test[i]$X, dts)
                 
                 # Update table
-                test[i]$pred <- mypred$y
-                test[i]$score <- mypred$score
+                test[i]$pred1 <- mypred$y[1]
+                test[i]$pred2 <- mypred$y[2]
+                test[i]$pred3 <- mypred$y[3]
+                test[i]$pred4 <- mypred$y[4]
+                test[i]$pred5 <- mypred$y[5]
             }
         }
         
         toc <- Sys.time()
         
         if (bare_benchmark == TRUE) {
-            accuracy0 <- 0
             accuracy1 <- 0
+            accuracy2 <- 0
+            accuracy3 <- 0
+            accuracy4 <- 0
+            accuracy5 <- 0
         } else {
-            # correct_wt is the weighted correct predictions
-            test[, correct := as.integer(y == pred)]
-            test[, correct_wt := (correct * count)] 
+            # correctN is cumulative for pred1..N
+            test[, correct1 := (y == pred1)]
+            test[, correct2 := (y == pred2) | correct1]
+            test[, correct3 := (y == pred3) | correct2]
+            test[, correct4 := (y == pred4) | correct3]
+            test[, correct5 := (y == pred5) | correct4]
 
             file_name <- paste0("../data/validation/test_", j, ".rda")
             
             print(paste0("Saving ", file_name))
             save(test, file=file_name)
             
-            # Calculate prediction accuracy: accuracy0 is accuracy including all
-            # samples in test; accuracy1 excludes samples with count < 2.
-            accuracy0 <-
-                sum(test[, correct_wt]) / sum(test[, count])
-            accuracy1 <-
-                sum(test[count > 1, correct_wt]) / sum(test[count > 1, count])
+            # Calculate prediction accuracy: accuracy0N is accuracy including
+            # all samples in test; accuracy1N includes samples with count > 1.
+            
+            accuracy01 <- sum(test$correct1 * test$count) / sum(test$count)
+            accuracy02 <- sum(test$correct2 * test$count) / sum(test$count)
+            accuracy03 <- sum(test$correct3 * test$count) / sum(test$count)
+            accuracy04 <- sum(test$correct4 * test$count) / sum(test$count)
+            accuracy05 <- sum(test$correct5 * test$count) / sum(test$count)
+            
+            test <- test[count > 1]
+            accuracy11 <- sum(test$correct1 * test$count) / sum(test$count)
+            accuracy12 <- sum(test$correct2 * test$count) / sum(test$count)
+            accuracy13 <- sum(test$correct3 * test$count) / sum(test$count)
+            accuracy14 <- sum(test$correct4 * test$count) / sum(test$count)
+            accuracy15 <- sum(test$correct5 * test$count) / sum(test$count)
         }
         
         # Remove unneeded object to reclaim memory
@@ -165,8 +191,16 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
         dt <- data.table(
             ngram=j,
             nrows=smp_size,
-            accuracy0=accuracy0,
-            accuracy1=accuracy1,
+            accuracy01=accuracy01,
+            accuracy02=accuracy02,
+            accuracy03=accuracy03,
+            accuracy04=accuracy04,
+            accuracy05=accuracy05,
+            accuracy11=accuracy11,
+            accuracy12=accuracy12,
+            accuracy13=accuracy13,
+            accuracy14=accuracy14,
+            accuracy15=accuracy15,
             t_tot_s=t,
             t_row_ms=(as.numeric(t) * 1000 / smp_size)
         )
@@ -177,13 +211,19 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
     }
     
     if (bare_benchmark == TRUE) {
-        file_name <- paste0("../data/validation/benchmark_time.rda")
+        file_name <- "../data/validation/benchmark_time.rda"
     } else {
-        file_name <- paste0("../data/validation/benchmark_accuracy.rda")
+        file_name <- "../data/validation/benchmark_accuracy.rda"
     }
     
     print(paste0("Saving ", file_name))
     save(bmark, file=file_name)
+    
+    toc0 <- Sys.time()
+    
+    print(paste0(
+        "Done!; total elapsed time ", delta_t(tic0, toc0))
+    )
     
     return(bmark)
 }
