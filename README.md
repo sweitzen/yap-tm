@@ -1,6 +1,8 @@
-## Coursera Data Science Specialization - Capstone Course 
+##Yet Another Predictive Text Model (YAP™) 
 
-This repository is for coursework in the Coursera [Data Science Capstone](https://www.coursera.org/learn/data-science-project/) class.
+Johns Hopkins University Coursera Data Science Specialization - Capstone Project
+
+YAP™ was implemented for the Coursera [Data Science Capstone](https://www.coursera.org/learn/data-science-project/) class.
 
 The goal of this class is to implement a simple predictive text model.
 
