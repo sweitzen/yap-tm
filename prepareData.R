@@ -4,7 +4,9 @@
 # The data used in this project can be found at:
 # https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
 #
-# On my Dell Precision T3500 with 24 GB of RAM, the runtimes were:
+# On my 8-year-old Dell Precision T3500 with a Xeon 3.33 GHz 6-core 
+# hyperthreaded processor, 24 GB of RAM, and a WDC WD2002FAEX-007BA0 hard drive
+# running under Kubuntu 16.04.3 linux, the runtimes were:
 #     02h:35m:42s to process the train data
 #     00h:11m:23s to process the test data
 #
