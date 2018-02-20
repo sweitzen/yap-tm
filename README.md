@@ -1,4 +1,4 @@
-##Yet Another Predictive Text Model (YAP™) 
+## Yet Another Predictive Text Model (YAP™) 
 
 Johns Hopkins University Coursera Data Science Specialization - Capstone Project
 
