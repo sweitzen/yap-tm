@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE)
 ```
 
 ## Introduction
@@ -16,94 +16,176 @@ text model to be developed. The data for this project is the [Coursera Swiftkey
 Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip.)
 It consists of internet-derived text in English, Finnish, German, and Russian.
 For this EDA, I will be using the English data, which consists of three files,
-each of approximately 200MB, collected from news sites, blogs, and twitter.
-```{r warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE}
-myfiles <- 
-    c("../final/en_US/en_US.blogs.txt", 
-      "../final/en_US/en_US.news.txt",
-      "../final/en_US/en_US.twitter.txt")
+each of approximately 200Mb, collected from news sites, blogs, and twitter.
+```{r}
+zip_file <- "../Coursera-SwiftKey.zip"
+pattern <- "en_US.*.txt"
 
-for(fileName in myfiles) {
-    numLines <- 0
-    con <- file(fileName, "r")
-    while(linesRead <- length(readLines(con, 1)) > 0) {
-        numLines <- numLines + linesRead
-    }
-    close(con)
+# Create temp directory and extract files from zip archive
+td <- tempdir()
+
+# Get list of files to extract from the archive based on provided pattern
+all_files <- unzip(zip_file, list=TRUE, exdir=td)
+mask <- grepl(pattern, all_files$Name)
+files_to_extract <- all_files[mask, ]
+
+# Reformat Length column to be more meaningful
+files_to_extract$Length <- round(files_to_extract$Length / 2^20, 4)
+names(files_to_extract)[names(files_to_extract) == "Length"] <- "Size_Mb"
+
+# Add a column for number of lines in file
+files_to_extract$Num_Lines <- 0
+
+# Extract the files
+extracted_files <- unzip(zip_file, files_to_extract$Name, exdir=td)
+
+# Initialize output
+dat <- NULL
+i <- 1
+
+# Loop over extracted files
+for(next_file in extracted_files) {
+    # Read the next extracted file
+    txt <- readLines(con=next_file, encoding="UTF-8", skipNul=TRUE)
     
-    size_mb <- file.info(fileName)$size / 2 ** 20
+    files_to_extract$Num_Lines[i] <- length(txt)
     
-    print(paste0(fileName,
-                 "  num_lines=", numLines,
-                 "  size_MB=", size_mb))
+    # Concatenate data
+    dat <- c(dat, txt)
+    
+    i <- i + 1
 }
+
+# Delete extracted files
+unlink(extracted_files)
+
+print(files_to_extract)
+
+print(paste0(
+    "Extracted data has ", length(dat), " lines and occupies ", 
+    round(object.size(dat) / 2^20, 4), " Mb of memory"
+))
+
+rm(dat)
 ```
 
 The R code supporting this report can be found on 
-[GitHub](https://github.com/sweitzen/data_science_project). It will not be
-reproduced here.
+[GitHub](https://github.com/sweitzen/yap-tm). It will not be reproduced here.
 
 ---
 
 ## Analysis
 I read the three files and concatenated them, shuffled them, and randomly
-sampled 80% for training, and 20% for testing. The cleaning I performed was
+sampled 98% for training, and 2% for testing. The cleaning I performed was
 fairly light: replacing abbreviations, ordinals, symbols, converting to 
 lowercase, and removing numbers, punctuation and whitespace. As I build and test
-the model, I may add or remove cleaning steps.  
+the model, I may add or remove cleaning steps. 
 
-The analysis I performed for this consisted of generating 1-, 2-, 3-, and 
-4-grams, and generating barplots of the most frequent combinations.
-```{r warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE}
+The analysis I performed for this consisted of generating 1-, 2-, 3-, 4- , and 
+5-grams, and generating barplots of the most frequent combinations. Also 
+included is the theoretical Zipf frequency; as you can see, it holds best for 
+1-grams:
+```{r}
+library(data.table)
 library(ggplot2)
 
 makePlot <- function(data, title) {
-     ggplot(data[1:30, ], aes(reorder(word, -freq), freq)) +
-        geom_bar(stat="identity", fill=I("darkred")) +
-        theme(axis.text.x=element_text(angle=45, size=10, hjust=1)) +
-        labs(x="Ngrams", y="Count") +
-        ggtitle(title)
+    
+    # total_count will be used to rescale count as frequency
+    total_count <- sum(data$count)
+    # max_freq will be used to generate theoretical Zipf frequency
+    max_freq <- data[1, count] / total_count
+    
+    # Select top 30 data points
+    data <- data[1:30]
+    
+    # Add columns for ngram, frequency and theoretical Zipf frequency
+    for (i in 1:30) data[i, ':=' (
+        ngram = gsub("_", " ", trimws(paste0(X, " ", y))),
+        frequency = (count / total_count),
+        zipf = max_freq / i
+    )]
+    
+    ggplot(data=data) +
+        geom_bar(
+            mapping=aes(reorder(ngram, frequency), frequency, group=1),
+            stat="identity",
+            fill=I("darkred")
+        ) +
+        geom_line(
+            mapping=aes(reorder(ngram, frequency), zipf, group=2),
+            size=2,
+            color="darkblue"
+        ) +
+        labs(
+            x="Ngrams",
+            y="Frequency"
+        ) +
+        ggtitle(title) +
+        coord_flip()
 }
 
-load("../data/unigrams.rda")
-load("../data/bigrams.rda")
-load("../data/trigrams.rda")
-load("../data/quadgrams.rda")
+load("../data/train/dts_pruned_8.rda")
 
-makePlot(unigrams, "30 Most Common Unigrams")
-makePlot(bigrams, "30 Most Common Bigrams")
-makePlot(trigrams, "30 Most Common Trigrams")
-makePlot(quadgrams, "30 Most Common Quadgrams")
+# Maximum size of Ngrams
+Nmax <- 5
+
+# Order Ngrams by count (frequency)
+for (j in 1:Nmax) {
+    dts[[j]] <- dts[[j]][order(-count)]
+}
+
+# Plot barcharts of most common N-grams with theoretical Zipf frequency overlaid
+makePlot(dts[[1]], "30 Most Common Unigrams")
+makePlot(dts[[2]], "30 Most Common Bigrams")
+makePlot(dts[[3]], "30 Most Common Trigrams")
+makePlot(dts[[4]], "30 Most Common Quadgrams")
+makePlot(dts[[5]], "30 Most Common Pentagrams")
 ```
 
 Given that these data were collected from the internet, I was quite surprised
 that the word "cat" does not appear in the top 30 unigrams. So, how far down the
 list does it occur?
 ```{r}
-match("cat", unigrams$word)
+match("cat", dts[[1]]$y)
 ```
 
 Just for fun, let's plot a word cloud of common bigrams:
-```{r warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE}
+```{r}
 library(wordcloud)
 
+set.seed(222)
+
+n <- 1
+
 wordcloud(
-    bigrams$word, 
-    bigrams$freq, 
-    max.words=50, 
-    colors=c("grey80", "darkgoldenrod1", "tomato")
+    trimws(paste0(dts[[n]]$X, " ", dts[[n]]$y)),
+    dts[[n]]$count, 
+    scale=c(10,1),
+    max.words=100,
+    random.order=FALSE,
+    rot.per=0.35,
+    use.r.layout=FALSE,
+    colors=brewer.pal(6, 'Spectral')
 )
 ```
+
+Since we're not performing sentiment analysis or trying to glean any deeper 
+meaning from the words, other than in what order they tend to appear, I don't 
+believe much more analysis at this point would be particularly fruitful.
 
 ---
 
 ## Next Steps
-I believe a simple predictive text model can be constructed using these ngrams,
-matching the last one, two, or three words typed and making a short list of 
-predictions based on the most frequent ngram matching the last (n-1) words.
+A simple predictive text model can be constructed by splitting each n-gram 
+(n = 2 to 5) into the first (n - 1) words (the input, X) and the last word (the 
+prediction, y). User input can be matched against X, and a list of predictions y
+can be returned in descending order of observed count from the training data. If
+no predictions are found in n-grams (n > 2), then the 1-grams will at least 
+return a list of most common words.
 
-The test dataset will be broken into 1-, 2-, and 3-grams, each with the next
-word, to compare against the predictions made by the model.
+The test dataset will be split into X and y similarly, to compare against 
+predictions made by the model.
 
 When complete, this will be packaged into a Shiny app for evaluation.
 
