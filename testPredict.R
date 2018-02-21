@@ -39,10 +39,12 @@ getPreppedTestData <- function() {
         # Loop over Ngram size: i
         for (i in 2:Nmax) {
             print(paste0(
-                "Adding pred1..5, correct1..5 to ", i, "-grams")
+                "Padding X with a final space and adding pred1..5, ", 
+                "correct1..5 to ", i, "-grams")
             )
             
             dts[[i]] <- dts[[i]][, ':=' (
+                X=paste0(X, " "),
                 pred1="",
                 pred2="",
                 pred3="",
@@ -121,7 +123,7 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
         if (bare_benchmark == TRUE) {
             # Loop over sample rows: i
             for (i in 1:smp_size) {
-                mypred <- predictNext(test[i]$X)[1]
+                mypred <- predictNext(test[i]$X, dts)[1]
             }
         } else {
             # Loop over sample rows: i
@@ -147,12 +149,15 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
         
         toc <- Sys.time()
         
+        t <- difftime(toc, tic, units="secs")
+        
         if (bare_benchmark == TRUE) {
-            accuracy1 <- 0
-            accuracy2 <- 0
-            accuracy3 <- 0
-            accuracy4 <- 0
-            accuracy5 <- 0
+            dt <- data.table(
+                ngram=j,
+                nrows=smp_size,
+                t_tot_s=t,
+                t_row_ms=(as.numeric(t) * 1000 / smp_size)
+            )
         } else {
             # correctN is cumulative for pred1..N
             test[, correct1 := (y == pred1)]
@@ -181,29 +186,27 @@ testPredict <- function(smp_size, bare_benchmark=FALSE) {
             accuracy13 <- sum(test$correct3 * test$count) / sum(test$count)
             accuracy14 <- sum(test$correct4 * test$count) / sum(test$count)
             accuracy15 <- sum(test$correct5 * test$count) / sum(test$count)
+            
+            dt <- data.table(
+                ngram=j,
+                nrows=smp_size,
+                accuracy01=accuracy01,
+                accuracy02=accuracy02,
+                accuracy03=accuracy03,
+                accuracy04=accuracy04,
+                accuracy05=accuracy05,
+                accuracy11=accuracy11,
+                accuracy12=accuracy12,
+                accuracy13=accuracy13,
+                accuracy14=accuracy14,
+                accuracy15=accuracy15,
+                t_tot_s=t,
+                t_row_ms=(as.numeric(t) * 1000 / smp_size)
+            )
         }
         
         # Remove unneeded object to reclaim memory
         rm(list=c("test"))
-        
-        t <- difftime(toc, tic, units="secs")
-        
-        dt <- data.table(
-            ngram=j,
-            nrows=smp_size,
-            accuracy01=accuracy01,
-            accuracy02=accuracy02,
-            accuracy03=accuracy03,
-            accuracy04=accuracy04,
-            accuracy05=accuracy05,
-            accuracy11=accuracy11,
-            accuracy12=accuracy12,
-            accuracy13=accuracy13,
-            accuracy14=accuracy14,
-            accuracy15=accuracy15,
-            t_tot_s=t,
-            t_row_ms=(as.numeric(t) * 1000 / smp_size)
-        )
         
         bmark <- rbindlist(list(bmark, dt))
         
