@@ -105,6 +105,8 @@ getData <- function(zip_file, pattern) {
         
         # Concatenate data
         dat <- c(dat, txt)
+        
+        i <- i + 1
     }
     
     # Delete extracted files
