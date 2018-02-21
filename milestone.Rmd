@@ -1,6 +1,6 @@
 ---
 title: "Data Science Capstone Milestone Report"
-author: "Scott D. Weitzenhoffer"
+author: "[Scott D. Weitzenhoffer](https://www.linkedin.com/in/sweitzen/)"
 date: "February 11, 2018"
 output: html_document
 ---
