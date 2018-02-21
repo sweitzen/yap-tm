@@ -53,7 +53,7 @@ predictNext <- function(input, ngrams) {
         fragment <- ""
     } else {
         # Split beginning fragment of next word off of input
-        fragment <- word(input, -1)
+        fragment <- str_to_lower(word(input, -1))
         input <- paste(word(input, 1:(str_count(input, "\\S+") - 1)),
                        collapse=" ")
     }
@@ -102,9 +102,14 @@ predictNext <- function(input, ngrams) {
             # Shorten input by one word off the front
             txt <- paste(word(input, -(i-1):-1), collapse="_")
     
-            # Generate search values for X and y for (N-1)-gran
-            X_search <- paste(word(input, -(i-1):-2), collapse="_")
-            y_search <- word(input, -1)
+            # Generate search values for X and y for (N-1)-gram
+            if (i == 2) {
+                X_search <- ""
+                y_search <- input
+            } else {
+                X_search <- paste(word(input, -(i-1):-2), collapse="_")
+                y_search <- word(input, -1)
+            }
             
             # Input (N-1)-gram count
             # NOTE: ngrams should have key (X, y)
