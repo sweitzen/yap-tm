@@ -161,5 +161,5 @@ predictNext <- function(input, ngrams) {
         if (nrow(hits) >= 5) break
     }
     
-    return(hits[, c("score", "y")])
+    return(hits[1:5, c("score", "y")])
 }
