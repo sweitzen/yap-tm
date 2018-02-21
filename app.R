@@ -3,6 +3,14 @@
 #
 # This is a Shiny web application showcasing Yet Another Predictive Text
 # Model (YAP™).
+#
+# https://sweitzen.shinyapps.io/yap-tm/
+#
+# Requires:
+#    predictNext.R
+#    tokenizer.R
+#    www/dts_pruned_8.rda (training ngrams, pruned to count > 8)
+#    www/style.css
 
 library(shiny)
 library(stringr)
@@ -29,7 +37,17 @@ ui <- fluidPage(
         "\"Stupid Backoff\", as described in ",
         "<a href=\"http://www.aclweb.org/anthology/D07-1090.pdf\">'Large ",
         "Language Models in Machine Translation'</a> by T. Brants et al, in ",
-        "EMNLP/CoNLL 2007.<br><hr>"
+        "EMNLP/CoNLL 2007.<br>"
+    )),
+    
+    HTML(paste0(
+        "Enter text in the input box below, as though you were using a mobile ",
+        "messaging app, and YAP&trade; will attempt to predict your next ",
+        "word. If the last character entered is a space, YAP&trade; will know ",
+        "the previous word is complete. If the last character entered is not ",
+        "a space, YAP&trade; will assume you are still typing the next word, ",
+        "and will offer predictions that start with the last word or word ",
+        "fragment you have typed.<br><hr>"
     )),
     
     # Sidebar with a text input
@@ -132,7 +150,7 @@ server <- function(input, output) {
                             collapse=" ")
             }
         }
-        print(out)
+        
         return(out)
     })
     
