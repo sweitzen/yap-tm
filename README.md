@@ -1,19 +1,23 @@
 ## Yet Another Predictive Text Model (YAP™) 
+===========================================
 
-Johns Hopkins University Coursera Data Science Specialization - Capstone Project
+YAP™ was implemented as the [Data Science Capstone](https://www.coursera.org/learn/data-science-project/) 
+project for the Johns Hopkins University Coursera [Data Science Specialization](https://www.coursera.org/specializations/jhu-data-science).
 
-YAP™ was implemented for the Coursera [Data Science Capstone](https://www.coursera.org/learn/data-science-project/) class.
+The YAP&trade; app uses a 5-gram language model to predict the next word from 
+user input, ranking the predictions using a method called Stupid Backoff, as 
+described in ['Large Language Models in Machine Translation'](http://www.aclweb.org/anthology/D07-1090.pdf) 
+by T. Brants et al, in EMNLP/CoNLL 2007.
 
-The goal of this class is to implement a simple predictive text model.
 
 The data supporting this project can be found at  
-
 * https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
 
 ---
 
-The milestone report is available at:
+The project milestone report is available at:
+* http://rpubs.com/sweitzen/data-science-milestone
 
-http://rpubs.com/sweitzen/data-science-milestone
 
-
+A live demo of YAP™ is available at shinyapps.io:
+*  https://sweitzen.shinyapps.io/yap-tm/
