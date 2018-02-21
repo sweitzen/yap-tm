@@ -5,6 +5,7 @@
 # Model (YAP™).
 
 library(shiny)
+library(stringr)
 
 source("predictNext.R")
 
@@ -115,10 +116,29 @@ server <- function(input, output) {
        return(out[, c("Prediction", "Score")])
     })
     
+    input_display <- reactive({
+        req(input$X)
+        
+        # If the input ends with a space, the last word is complete
+        # If it doesn't end with a space, the last word may not be complete
+        if (str_count(input$X, "\\S+") == 1) {
+            if (str_sub(input$X, start= -1) == " ") {
+                return(input$X)
+            } else {
+                return("")
+            }
+        }
+        
+        # Split beginning fragment of next word off of input
+        return(paste(word(input$X, 1:(str_count(input$X, "\\S+") - 1)),
+                     collapse=" ")
+        )
+    })
+    
     # Output the top prediction appended to the input
     output$next_word <- renderUI((
         HTML(paste0(
-            input$X,
+            input_display(),
             " <i>",
             predictions()$Prediction[1], 
             "</i>"
