@@ -121,18 +121,19 @@ server <- function(input, output) {
         
         # If the input ends with a space, the last word is complete
         # If it doesn't end with a space, the last word may not be complete
-        if (str_count(input$X, "\\S+") == 1) {
-            if (str_sub(input$X, start= -1) == " ") {
-                return(input$X)
+        if (str_sub(input$X, start= -1) == " ") {
+            out <- input$X
+        } else {
+            if (str_count(input$X, "\\S+") == 1) {
+                out <- ""
             } else {
-                return("")
+                # Split beginning fragment of next word off of input
+                out <-paste(word(input$X, 1:(str_count(input$X, "\\S+") - 1)),
+                            collapse=" ")
             }
         }
-        
-        # Split beginning fragment of next word off of input
-        return(paste(word(input$X, 1:(str_count(input$X, "\\S+") - 1)),
-                     collapse=" ")
-        )
+        print(out)
+        return(out)
     })
     
     # Output the top prediction appended to the input
