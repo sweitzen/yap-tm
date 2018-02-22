@@ -1,7 +1,7 @@
-## Yet Another Predictive Text Model (YAP™) 
+## Yet Another Predictive Text Model (YAP&trade;) 
 ===========================================
 
-YAP™ was implemented as the [Data Science Capstone](https://www.coursera.org/learn/data-science-project/) 
+YAP&trade; was implemented as the [Data Science Capstone](https://www.coursera.org/learn/data-science-project/) 
 project for the Johns Hopkins University Coursera [Data Science Specialization](https://www.coursera.org/specializations/jhu-data-science).
 
 The YAP&trade; app uses a 5-gram language model to predict the next word from 
@@ -18,6 +18,8 @@ The data supporting this project can be found at
 The project milestone report is available at:
 * http://rpubs.com/sweitzen/data-science-milestone
 
+The final product pitch is available at:
+* http://rpubs.com/sweitzen/yaptm_pitch
 
-A live demo of YAP™ is available at shinyapps.io:
+A live demo of YAP&trade; is available at shinyapps.io:
 *  https://sweitzen.shinyapps.io/yap-tm/
