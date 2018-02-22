@@ -32,15 +32,6 @@ ui <- fluidPage(
     
     # Text instructions
     HTML(paste0(
-        "The YAP&trade; app uses a 5-gram language model to predict the next ",
-        "word from user input, ranking the predictions using a method called ",
-        "\"Stupid Backoff\", as described in ",
-        "<a href=\"http://www.aclweb.org/anthology/D07-1090.pdf\">'Large ",
-        "Language Models in Machine Translation'</a> by T. Brants et al, in ",
-        "EMNLP/CoNLL 2007.<br>"
-    )),
-    
-    HTML(paste0(
         "Enter text in the input box below, as though you were using a mobile ",
         "messaging app, and YAP&trade; will attempt to predict your next ",
         "word. If the last character entered is a space, YAP&trade; will know ",
@@ -92,32 +83,24 @@ ui <- fluidPage(
     HTML("<hr>"),
     
     HTML(paste0(
+        "The YAP&trade; app uses a 5-gram language model to predict the next ",
+        "word from user input, ranking the predictions using a method called ",
+        "\"Stupid Backoff\", as described in ",
+        "<a href=\"http://www.aclweb.org/anthology/D07-1090.pdf\">'Large ",
+        "Language Models in Machine Translation'</a> by T. Brants et al, in ",
+        "EMNLP/CoNLL 2007.<p><br>"
+    )),
+    
+    HTML(paste0(
         "YAP&trade; was implemented as the capstone project for the Johns ",
         "Hopkins University Coursera ",
         "<a href=\"https://www.coursera.org/specializations/jhu-data-science\">",
         "Data Science Specialization</a>.<p><br>",
         "The R code underlying this app can be found on ",
-        "<a href=\"https://github.com/sweitzen/yap-tm\">GitHub</a>.",
-        "<br>Visit the author on ",
+        "<a href=\"https://github.com/sweitzen/yap-tm\">GitHub</a>.<br>",
+        "Visit the author on ",
         "<a href=\"https://www.linkedin.com/in/sweitzen/\">LinkedIn</a>."
     ))
-    
-    #tags$script(HTML("src=\"//platform.linkedin.com/in.js\" type=\"text/javascript\">")),
-    #tags$script(HTML("type=\"IN/MemberProfile\" data-id=\"https://www.linkedin.com/in/sweitzen\" data-format=\"inline\" data-related=\"false\">"))
-    
-    #HTML(paste0(
-    #    "<script src=\"//platform.linkedin.com/in.js\" type=\"text/javascript\"></script>",
-    #    "<script type=\"IN/MemberProfile\" data-id=\"https://www.linkedin.com/in/sweitzen\" data-format=\"inline\" data-related=\"false\"></script>"
-    #)),
-    
-    #tags$script(src="//platform.linkedin.com/in.js", type="text/javascript"),
-    #tags$script(type="IN/MemberProfile", data-id="https://www.linkedin.com/in/sweitzen", data-format="inline", data-related="false")
-
-    #<script src="//platform.linkedin.com/in.js" type="text/javascript"></script>
-    #<script type="IN/MemberProfile" data-id="https://www.linkedin.com/in/sweitzen" data-format="inline" data-related="false"></script>
-    
-    #<script src="http://platform.linkedin.com/in.js" type="text/javascript"></script>
-    #<script type="IN/MemberProfile" data-id="http://www.linkedin.com/in/sweitzen" data-format="hover" data-text="Scott Weitzenhoffer"></script>
 )
 
 ################################################################################
