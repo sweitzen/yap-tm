@@ -9,11 +9,11 @@ output: html_document
 knitr::opts_chunk$set(warning=FALSE, message=FALSE, echo=FALSE, cache=TRUE)
 ```
 
-## Introduction
+## <a name="introduction"></a>Introduction
 
 This report presents initial exploratory data analysis supporting the predictive
 text model to be developed. The data for this project is the [Coursera Swiftkey 
-Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip.)
+Dataset](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip).
 It consists of internet-derived text in English, Finnish, German, and Russian.
 For this EDA, I will be using the English data, which consists of three files,
 each of approximately 200Mb, collected from news sites, blogs, and twitter.
@@ -74,17 +74,48 @@ The R code supporting this report can be found on
 
 ---
 
-## Analysis
-I read the three files and concatenated them, shuffled them, and randomly
-sampled 98% for training, and 2% for testing. The cleaning I performed was
-fairly light: replacing abbreviations, ordinals, symbols, converting to 
-lowercase, and removing numbers, punctuation and whitespace. As I build and test
-the model, I may add or remove cleaning steps. 
+## <a name="ingest"></a>Data Ingest
+Once the data were read into memory, the lines were shuffled, and randomly
+sampled, taking 98% for training, and 2% for testing. With such a large volume 
+of data, 2%  is more than sufficient for testing.
 
-The analysis I performed for this consisted of generating 1-, 2-, 3-, 4- , and 
-5-grams, and generating barplots of the most frequent combinations. Also 
-included is the theoretical Zipf frequency; as you can see, it holds best for 
-1-grams:
+The R package [quanteda](https://cran.r-project.org/web/packages/quanteda/index.html) 
+was used to transform the raw data into tables of n-grams of size 1-5, and their
+observed counts in the data. This process was very memory-intensive, and 
+required splitting the data into chunks of 100,000 lines at a time. For each
+chunk:
+
+1. Construct a corpus of 100,000 lines of text.
+2. Split corpus into individual sentences. This prevents n-grams from spanning 
+sentences.
+3. Split sentences up into n-gram tokens of sizes 1-5.
+4. Construct a document-feature matrix (dfm) from the n-grams.
+5. Using the dfm feature names and column sums, create a data.table from the 
+ngrams with their frequency and count.
+
+Converting n-gram tokens into document-feature matrices was the most taxing part 
+of the process.
+
+On my 8-year-old Dell Precision T3500 with a Xeon 3.33 GHz 6-core hyperthreaded
+processor, 24 GB of RAM, and a WDC WD2002FAEX-007BA0 hard drive running under 
+Kubuntu 16.04.3 linux, the runtimes were: 
+
+* 02h:35m:42s to process the train data 
+* 00h:11m:23s to process the test data 
+
+The cleaning performed on the data was fairly light: replacing abbreviations, 
+ordinals, symbols, converting to lowercase, and removing numbers, punctuation 
+and whitespace. As I build and test the model, I may add or remove cleaning 
+steps. 
+
+---
+
+## <a name="analysis"></a>Analysis
+Analysis was fairly light, as the goal was not analysing the text itself for 
+meaning, but simply determining frequent order of words. As such, I generated 
+barplots of the most frequent combinations. Also included is the theoretical 
+[Zipf frequency](https://en.wikipedia.org/wiki/Zipf%27s_law); as you can see, it 
+holds best for 1-grams:
 ```{r}
 library(data.table)
 library(ggplot2)
@@ -176,7 +207,7 @@ believe much more analysis at this point would be particularly fruitful.
 
 ---
 
-## Next Steps
+## <a name="nextsteps"></a>Next Steps
 A simple predictive text model can be constructed by splitting each n-gram 
 (n = 2 to 5) into the first (n - 1) words (the input, X) and the last word (the 
 prediction, y). User input can be matched against X, and a list of predictions y
