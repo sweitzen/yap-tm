@@ -1,7 +1,3 @@
-# docker build -t yaptm .
-# docker container run -d -p 3838:3838 -v shiny-db:/srv/shiny-server --name yaptm yaptm
-# yaptm will be in browser at localhost:3838
-
 FROM quantumobject/docker-shiny
 
 # libxml2-dev is required for XML, a dependency of quanteda

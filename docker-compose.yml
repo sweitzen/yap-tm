@@ -1,10 +1,8 @@
-# docker container run -d -p 3838:3838 -v shiny-db:/srv/shiny-server --name yaptm yaptm
-
 version: '3'
 
 services:
   yaptm:
-    image: yaptm
+    image: sdweitzen/yap-tm
     ports:
       - '3838:3838' 
     volumes:

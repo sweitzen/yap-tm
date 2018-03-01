@@ -35,7 +35,7 @@ version: '3'
 
 services:
   yaptm:
-    image: yaptm
+    image: sdweitzen/yap-tm
     ports:
       - '3838:3838' 
     volumes:
