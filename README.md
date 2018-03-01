@@ -23,3 +23,27 @@ The final product pitch is available at:
 
 A live demo of YAP&trade; is available at shinyapps.io:
 *  https://sweitzen.shinyapps.io/yap-tm/
+
+---
+
+Docker Compose
+==============
+If you wish to run locally in a Dockerized Shiny Server:
+
+```
+version: '3'
+
+services:
+  yaptm:
+    image: yaptm
+    ports:
+      - '3838:3838' 
+    volumes:
+      - shiny-db:/srv/shiny-server
+
+volumes:
+  shiny-db:
+```
+
+Once the Docker app is up, YAP&trade; will be available in your browser at
+`localhost:3838`.
